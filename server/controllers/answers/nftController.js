@@ -54,7 +54,7 @@ exports.getTokenBalance = async (req, res) => {
     const { contractAddress, walletAddress } = req.params;
     console.log(contractAddress, walletAddress)
     if (!contractAddress || !walletAddress)
-        res.status(500).send('Error retrieving token balance');
+        res.status(400).send('contractAddress and walletAddress are required');
 
     try {
         const contract = new web3Client.eth.Contract(
@@ -96,79 +96,70 @@ exports.transferTokens = async (req, res) => {
 
     if (!contractAddress || !privateKey || !to || !tokenId)
         res.status(400).send('Error transferring tokens');
+    try {
+        let correctPrivateKey = privateKey.startsWith("0x") ? privateKey : `0x${privateKey}`;
+        const account = web3Client.eth.accounts.privateKeyToAccount(correctPrivateKey);
 
-    let correctPrivateKey = privateKey.startsWith("0x") ? privateKey : `0x${privateKey}`;
-    const account = web3Client.eth.accounts.privateKeyToAccount(correctPrivateKey);
+        const contract = new web3Client.eth.Contract(
+            [
+                {
+                    "inputs": [
+                        {
+                            "internalType": "address",
+                            "name": "from",
+                            "type": "address"
+                        },
+                        {
+                            "internalType": "address",
+                            "name": "to",
+                            "type": "address"
+                        },
+                        {
+                            "internalType": "uint256",
+                            "name": "tokenId",
+                            "type": "uint256"
+                        }
+                    ],
+                    "name": "transferFrom",
+                    "outputs": [],
+                    "stateMutability": "nonpayable",
+                    "type": "function"
+                }
+            ],
+            contractAddress
+        );
 
-    const contract = new web3Client.eth.Contract(
-        [
-            {
-                "inputs": [
-                    {
-                        "internalType": "address",
-                        "name": "from",
-                        "type": "address"
-                    },
-                    {
-                        "internalType": "address",
-                        "name": "to",
-                        "type": "address"
-                    },
-                    {
-                        "internalType": "uint256",
-                        "name": "tokenId",
-                        "type": "uint256"
-                    }
-                ],
-                "name": "transferFrom",
-                "outputs": [],
-                "stateMutability": "nonpayable",
-                "type": "function"
-            }
-        ],
-        contractAddress
-    );
-
-    const txTemp = contract.methods.transferFrom(account.address, to, tokenId);
-    const gas = await txTemp.estimateGas({ from: account.address });
-    const gasPrice = await web3Client.eth.getGasPrice();
-    const txData = txTemp.encodeABI();
-    const nonce = await web3Client.eth.getTransactionCount(account.address, "latest");
-
-    console.log(gas)
-    const accessListData = await web3Client.eth.createAccessList({
-        from: account.address,
-        to: contractAddress,
-        data: txData,
-    });
-    const tx = {
-        from: account.address,
-        to: contractAddress,
-        data: txData,
-        gas,
-        gasPrice,
-        type: 1,
-        accessList: accessListData.accessList,
-        nonce,
-        chainId: await web3Client.eth.getChainId()
-    };
+        const txTemp = contract.methods.transferFrom(account.address, to, tokenId);
+        const txData = txTemp.encodeABI();
+        const nonce = await web3Client.eth.getTransactionCount(account.address, "latest");
+        const gasLimit = await txTemp.estimateGas({ from: account.address }) + BigInt(100);
+        const maxFeePerGas = Number((await web3Client.eth.calculateFeeData()).maxFeePerGas);
+        const maxPriorityFeePerGas = Number((await web3Client.eth.calculateFeeData()).maxPriorityFeePerGas);
 
 
+        const tx = {
+            from: account.address,
+            to: contractAddress,
+            data: txData,
+            gasLimit,
+            maxFeePerGas,
+            maxPriorityFeePerGas,
+            type: 2,
+            nonce,
+            chainId: await web3Client.eth.getChainId(),
+        };
 
+        // Sign the transaction with the private key
+        const signedTx = await account.signTransaction(tx);
 
+        // Send the signed transaction
+        const receipt = await web3Client.eth.sendSignedTransaction(signedTx.rawTransaction);
 
-    // Sign the transaction with the private key
-    const signedTx = await account.signTransaction(tx);
+        console.log(receipt);
 
-    // Send the signed transaction
-    const receipt = await web3Client.eth.sendSignedTransaction(signedTx.rawTransaction);
-
-    console.log(receipt);
-
-
-
-    res.json({ success: true, hash: receipt.transactionHash });
-    // } catch (error) {
-    //     res.status(500).send('Error transferring tokens');
-    // }
+        res.json({ success: true, hash: receipt.transactionHash });
+    } catch (error) {
+        console.error(error);
+        res.status(500).send('Error transferring tokens');
+    }
 };
