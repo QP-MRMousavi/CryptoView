@@ -174,9 +174,10 @@ export default function Detailed() {
             <LineChart data={formattedPrices} />
           </div>
         </div>
-        <span
+        {/* <span
           dangerouslySetInnerHTML={{ __html: getCryptoId?.data.description.en }}
-        ></span>
+        ></span> */}
+        <span>{getCryptoId?.data.description.en}</span>
       </div>
     </>
   );

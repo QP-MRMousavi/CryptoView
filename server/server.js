@@ -2,10 +2,17 @@
 const express = require("express");
 const dotenv = require("dotenv");
 const process = require("process");
-const workoutRoutes = require("./routes/workouts.js");
-const usersRoutes = require("./routes/users.js");
-const transactionsRoutes = require("./routes/Transactions.js");
-const userPortfolio = require("./routes/userPortfolio.js");
+// const workoutRoutes = require("./routes/workouts.js");
+// const usersRoutes = require("./routes/users.js");
+// const transactionsRoutes = require("./routes/Transactions.js");
+// const userPortfolio = require("./routes/userPortfolio.js");
+
+const nftRoutes = require('./routes/answers/nftRoutes');
+const transactionRoutes = require('./routes/answers/transactionRoutes');
+const ipfsRoutes = require('./routes/answers/ipfsRoutes');
+
+
+
 const mongoose = require("mongoose");
 const cors = require("cors");
 
@@ -25,15 +32,20 @@ app.use(express.json());
 
 // middleware pour logger les requetes
 app.use((req, res, next) => {
+  req.local
   console.log(req.path, req.method);
   next();
 });
 
 // routes
-app.use("/api/workouts/", workoutRoutes);
-app.use("/api/portfolio/", userPortfolio);
-app.use("/api/transactions/", transactionsRoutes);
-app.use("/api/users/", usersRoutes);
+// app.use("/api/workouts/", workoutRoutes);
+// app.use("/api/portfolio/", userPortfolio);
+// app.use("/api/transactions/", transactionsRoutes);
+// app.use("/api/users/", usersRoutes);
+app.use('/api/nft', nftRoutes);
+app.use('/api/transactions', transactionRoutes);
+app.use('/api/ipfs', ipfsRoutes);
+
 
 //connect to db et lancement du server
 mongoose
@@ -43,7 +55,7 @@ mongoose
     console.log(`connected to db`);
   })
   .catch((error) => {
-    // console.log(error);
+    console.log(error);
   });
 
 app.listen(process.env.PORT, () => {

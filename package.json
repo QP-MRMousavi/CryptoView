@@ -4,7 +4,8 @@
   "version": "0.0.0",
   "scripts": {
     "start": "concurrently \"vite\" \"node ./server/server.js\"",
-    "dev": "concurrently \"vite\" \"nodemon ./server/server.js\""
+    "dev": "concurrently \"vite\" \"nodemon ./server/server.js\"",
+    "server": "nodemon ./server/server.js"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.3.4",
@@ -32,6 +33,7 @@
     "mongodb": "^6.5.0",
     "mongoose": "^8.3.2",
     "path": "^0.12.7",
+    "pinata": "^1.8.1",
     "process": "^0.11.10",
     "react": "^18.2.0",
     "react-chartjs-2": "^5.2.0",
